@@ -10,16 +10,32 @@ const backends = parseBackends();
 console.log(`Configured ${backends.length} backend(s): ${backends.map(b => b.name).join(", ")}`);
 console.log(`Backup frequencies: ${BACKUP_SCHEDULES.map(f => `${f.frequency} (${f.schedule})`).join(", ")}`);
 
-const runBackupCycle = async (frequency: BackupFrequency) => {
-  for (const backend of backends) {
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const runBackupWithRetry = async (backend: typeof backends[number], frequency: BackupFrequency) => {
+  for (let attempt = 0; attempt <= env.BACKUP_MAX_RETRIES; attempt++) {
     try {
       await backup(backend, frequency);
+      return;
     } catch (error) {
-      const msg = `Backup failed for "${backend.name}" (${frequency}): ${error instanceof Error ? error.message : String(error)}`;
+      const msg = `Backup failed for "${backend.name}" (${frequency}), attempt ${attempt + 1}/${env.BACKUP_MAX_RETRIES + 1}: ${error instanceof Error ? error.message : String(error)}`;
       console.error(msg, error);
-      await sendFailureNotification(msg);
-      process.exit(1);
+
+      if (attempt < env.BACKUP_MAX_RETRIES) {
+        const delaySec = Math.round(env.BACKUP_RETRY_DELAY_MS / 1000);
+        console.log(`Retrying in ${delaySec}s...`);
+        await delay(env.BACKUP_RETRY_DELAY_MS);
+      } else {
+        await sendFailureNotification(msg);
+        process.exit(1);
+      }
     }
+  }
+};
+
+const runBackupCycle = async (frequency: BackupFrequency) => {
+  for (const backend of backends) {
+    await runBackupWithRetry(backend, frequency);
   }
 };
 

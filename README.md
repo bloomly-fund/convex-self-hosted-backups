@@ -10,6 +10,7 @@ Backup script for self-hosted Convex instances. Exports your database (and optio
 - **S3-compatible storage** — works with AWS S3, Cloudflare R2, Backblaze B2, MinIO, etc.
 - **File storage backups** — optionally include Convex file storage in exports
 - **Automatic retention** — old backups are pruned per frequency
+- **Automatic retry** — failed backups are retried after a configurable delay (default: 5 minutes)
 - **Failure notifications** — get notified via Telegram (or any shoutrrr-supported service) when backups fail
 - **Single-shot mode** — run once and exit, for use with external schedulers (e.g. Kubernetes CronJobs)
 
@@ -47,14 +48,14 @@ For single-backend setups using legacy env vars, the folder name defaults to `BA
 
 ### Backup Schedules
 
-Backups run automatically on fixed schedules:
+Backups run on randomized schedules to prevent collisions across backends. Each frequency gets a unique random minute (0-59) and hour (0-5 AM) at startup:
 
 | Frequency | Schedule |
 |---|---|
-| Hourly | Every hour at :00 |
-| Daily | Every day at midnight |
-| Weekly | Every Sunday at midnight |
-| Monthly | 1st of every month at midnight |
+| Hourly | Every hour at a random minute |
+| Daily | Once per day at a random early morning time |
+| Weekly | Every Sunday at a random early morning time |
+| Monthly | 1st of every month at a random early morning time |
 
 ### Retention Limits
 
@@ -77,7 +78,8 @@ Maximum number of backups to keep per frequency. Oldest backups are deleted firs
 | `SUPPORT_OBJECT_LOCK` | No | `false` | Enable MD5 hashing for buckets with object lock. |
 | `RUN_ON_STARTUP` | No | `false` | Run a backup immediately on startup, then continue on schedule. |
 | `SINGLE_SHOT_MODE` | No | `false` | Run a single backup and exit. Useful with external cron schedulers. |
-
+| `BACKUP_MAX_RETRIES` | No | `1` | Number of retry attempts for failed backups before exiting. |
+| `BACKUP_RETRY_DELAY_MS` | No | `300000` | Delay in milliseconds between retry attempts (default: 5 minutes). |
 
 ### Notifications
 

@@ -87,6 +87,14 @@ export const env = envsafe({
     default: '',
     allowEmpty: true,
   }),
+  BACKUP_MAX_RETRIES: num({
+    desc: 'Number of retry attempts for failed backups before exiting.',
+    default: 1,
+  }),
+  BACKUP_RETRY_DELAY_MS: num({
+    desc: 'Delay in milliseconds between retry attempts.',
+    default: 300000, // 5 minutes
+  }),
 });
 
 export type BackendConfig = {
