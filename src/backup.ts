@@ -1,4 +1,4 @@
-import { exec } from "child_process";
+import { execFile } from "child_process";
 import {
   S3Client,
   S3ClientConfig,
@@ -129,9 +129,13 @@ const dumpToFile = async (
   console.log(`Dumping convex backup for "${backend.name}" to file...`);
 
   await new Promise<void>((resolve, reject) => {
-    const cmd = `npx convex export --path ${filePath}${env.INCLUDE_FILE_STORAGE ? " --include-file-storage" : ""}`;
-    exec(
-      cmd,
+    const args = ["convex", "export", "--path", filePath];
+    if (env.INCLUDE_FILE_STORAGE) {
+      args.push("--include-file-storage");
+    }
+    execFile(
+      "npx",
+      args,
       {
         env: {
           ...process.env,
